@@ -11,8 +11,12 @@ const ENTRY_LINE =
 
 // The line must be a single sentence, 1-200 characters, and not only
 // whitespace — the gate refuses anything else, so check before writing.
-function main(): void {
-  const text = ENTRY_LINE.trim();
+// Normalise first: collapse stray internal whitespace (a pasted line can
+// carry double spaces that inflate the count and break the single-sentence
+// read), then require exactly one terminal full stop so the entry cannot
+// smuggle in a second sentence.
+function validateLine(raw: string): string {
+  const text = raw.replace(/\s+/g, " ").trim();
   if (text.length < 1 || text.length > 200) {
     throw new Error(`entry must be 1-200 characters, got ${text.length}`);
   }
@@ -22,6 +26,14 @@ function main(): void {
   if (!text.endsWith(".")) {
     throw new Error("entry must end as one finished sentence");
   }
+  if (text.slice(0, -1).match(/[.!?]\s+[A-Z]/)) {
+    throw new Error("entry must be one sentence, not two");
+  }
+  return text;
+}
+
+function main(): void {
+  const text = validateLine(ENTRY_LINE);
   mkdirSync("/output", { recursive: true });
   writeFileSync("/output/entry.txt", text, "utf8");
 }
